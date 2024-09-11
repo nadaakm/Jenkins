@@ -1,0 +1,60 @@
+services:
+  jenkins:
+    image: jenkins:latest
+    privileged: true
+    user: "root"
+    container_name: sfa13-jenkins
+    volumes:
+      - jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - internal
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.gzip-compress.compress=true
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.entrypoints=web,websecure
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.rule=Host(`${URL_JENKINS}`)
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.tls=true
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.tls.certresolver=le
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.middlewares=gzip-compress
+      - traefik.http.routers.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.service=${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}
+
+      - traefik.http.services.${INSTANCE_PROJECT}-jenkins-${INSTANCE_TAG}.loadbalancer.server.port=8080
+    restart: always
+
+  # jenkins-agent:
+  #   image: agent:dev
+  #   container_name: sfa13-jenkins-agent
+  #   privileged: true
+  #   user: "root"
+  #   ports:
+  #     - "2201:22"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /usr/bin/docker:/usr/bin/docker
+  #   environment:
+  #     - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY}
+  #   networks:
+  #     - internal
+  #     - web
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.http.middlewares.gzip-compress.compress=true
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.entrypoints=web,websecure
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.rule=Host(`${URL_AGENT_JENKINS}`)
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.tls=true
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.tls.certresolver=le
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.middlewares=gzip-compress
+  #     - traefik.http.routers.jenkins-agent-${INSTANCE_TAG}.service=jenkins-agent-${INSTANCE_TAG}
+
+  #     - traefik.http.services.jenkins-agent-${INSTANCE_TAG}.loadbalancer.server.port=2200
+  #   restart: always
+
+volumes:
+  jenkins:
+
+networks:
+  internal:
+  web:
+    external: true
