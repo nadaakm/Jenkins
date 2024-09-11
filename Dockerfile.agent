@@ -1,21 +1,27 @@
 # Utilisation de l'image officielle de Jenkins basée sur la dernière version LTS de Debian
-FROM jenkins/jenkins:lts
+FROM jenkins/ssh-agent
+
 USER root
+
 RUN apt-get update -qq \
     && apt-get install -qqy apt-transport-https ca-certificates curl gnupg2 software-properties-common
+
+# Ajout de la clé GPG de Docker
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-RUN add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/debian \
-   $(lsb_release -cs) \
-   stable"
-RUN apt-get update  -qq \
-    && apt-get -y install docker-ce
-RUN usermod -aG docker jenkins
+
+# Ajout du référentiel Docker dans les sources APT
+RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+
+# Mise à jour des sources et installation de Docker CE
+RUN apt-get update -qq \
+    && apt-get install -y docker-ce
+# create a roup docker wiht same GID of the host
+RUN groupadd -g 115 dockerhost
+
+# Ajout de l'utilisateur jenkins-agent au groupe docker
+RUN usermod -aG dockerhost jenkins
+
+# Rebasculer vers l'utilisateur jenkins (facultatif mais recommandé)
+USER jenkins
 # Déclare le volume Jenkins pour persister les données entre les redémarrages
-VOLUME /var/jenkins_home
-
-# Expose le port Jenkins
-EXPOSE 8080
-
-# Expose le port d'agent pour les connexions d'agent d'esclave
-EXPOSE 50000
+VOLUME /var/jenkins_home_agent
